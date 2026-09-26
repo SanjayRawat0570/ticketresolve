@@ -1,6 +1,23 @@
 # Demo runbook
 
-Target: **3 minutes**. Two tickets, two outcomes, one approval click.
+**Hard cap: 3:00.** Over by a second and it may not be judged — cut to 2:45 to
+leave margin.
+
+Required by the spec:
+
+- [ ] MP4, **1080p**
+- [ ] Audio narration **or** captions
+- [ ] **At least 30 continuous seconds showing TrueForge itself** — the chat
+      UI, the SDK, or the API. This is a scored requirement, not a formality.
+- [ ] Uploaded to Google Drive, **shared publicly**, link tested in incognito
+
+The TrueForge-30s requirement is why you demo from the chat UI rather than the
+terminal: the session view showing agent steps, tool calls and the
+Approve/Reject control is unambiguously "TrueForge in use". The Agent Config
+panel (model, instructions, MCP servers, sandbox toggle) is a good second or
+two of B-roll if you need to pad it.
+
+Two tickets, two outcomes, one approval click.
 
 ## Before you hit record
 
@@ -71,9 +88,21 @@ not invent a plausible fix."
 
 Show the draft. Note it **still** goes through approval.
 
-**2:40–3:00 — Close.**
+**2:40–2:50 — Close.**
 "Real ticket in, real sandbox execution, a verified patch or an honest no — and
 a human in the loop on anything the customer sees."
+
+Leave 10 seconds of margin against the 3:00 cap.
+
+## Submission checklist
+
+- [ ] Video ≤ 3:00, 1080p MP4, ≥30s of TrueForge on screen
+- [ ] Drive link tested in an incognito window
+- [ ] `WRITEUP.md` in the repo root (covers problem, reach, stop point,
+      architecture, TrueForge usage, real vs mocked, known limits)
+- [ ] Repo public, MIT licensed, `.env.example` present, `.env` NOT committed
+- [ ] **Do not squash the commits** — the spec requires visible history
+- [ ] Both links pasted into the submission form
 
 ## If something breaks mid-demo
 

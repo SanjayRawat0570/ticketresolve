@@ -1,37 +1,62 @@
-# Ticket Resolver — submission write-up
+# Ticket Resolver
 
-*~300 words. Trim the last paragraph first if you need to fit a shorter limit.*
+## The problem
 
----
+The slowest part of a support queue isn't fixing bugs — it's working out which
+reports are real. An engineer reads a ticket, guesses, and either burns an hour
+on something that was never broken or sends a confident reply about a fix
+nobody verified.
 
-**The problem.** The slowest part of a support queue isn't fixing bugs — it's
-finding out which reports are real. An engineer reads a ticket, guesses, and
-either burns an hour on something that was never broken or writes a confident
-reply about a fix nobody verified.
+## What the agent reaches
 
-**What we built.** Ticket Resolver takes a Linear issue, reproduces it by
-actually running the code in a sandbox, and comes back with one of two things: a
-patch it has proven works, or an honest "could not reproduce."
+- **Linear**, over the hosted Linear MCP server (OAuth via dynamic client
+  registration). It reads the issue and posts the reply as a comment.
+- **A Daytona sandbox**, provisioned on demand, where it recreates the project
+  and runs the test suite.
 
-The agent pulls the ticket from Linear over MCP, checks out the referenced repo
-into a sandbox, and runs the test suite. If tests fail in a way that matches the
-report, it finds the root cause, writes a minimal patch, applies it, and
-**re-runs the suite to prove the fix holds** — the before and after output are
-both in its report. If the suite passes, it says so and asks for the specific
-information it would need. It is instructed never to fabricate a fix, and every
-claim it makes about the code must trace to sandbox output from that run.
+It is given four Linear tools out of the 68 available: `get_issue`,
+`list_issues`, `list_comments`, `save_comment`. It cannot create or edit
+issues.
 
-**The human checkpoint.** Replying to the customer requires approval. The agent
-is given four Linear tools, and the one that posts the reply — `save_comment` —
-is gated by TrueForge's `require_approval_for_tools`. The server halts the turn
-with a `tool.approval_required` event and resumes only on an explicit allow.
-This is a server-side gate, not a line in the system prompt, so no amount of
-clever model reasoning can route around it.
+## Where it stops
 
-**What's real.** The Linear integration, the sandboxed execution, the
-reproduction, the patch verification, and the approval gate all genuinely run.
-The bug in our sample repo is a real one and the tests genuinely fail. We ship a
-local `tickets.json` queue purely as an offline fallback in case OAuth breaks on
-venue wifi; it is not used when Linear is connected.
+`save_comment` — the customer reply — is gated by
+`require_approval_for_tools`. The server emits `tool.approval_required`, halts
+the turn, and resumes only on an explicit `allow`. This is enforced outside the
+model, so prompt wording cannot route around it. Every ticket ends at this
+gate, including "could not reproduce".
 
-**Built with:** TrueForge, Linear MCP, OpenAI.
+## Architecture
+
+Ticket → sandbox reproduction → verdict → patch → reply → human gate. The agent
+must re-run the suite after patching and report both the before and after
+output. Three verdicts: `REPRODUCED`, `NOT_REPRODUCED`, and `BLOCKED` — the
+last one exists because an infrastructure failure must never be dressed up as a
+finding about the customer's code.
+
+## How TrueForge was used
+
+TrueForge is the harness: agent loop, MCP routing, sandbox-as-tool, and the
+approval checkpoint. Everything is provisioned through its HTTP API by
+`setup.py` — model provider, sandbox provider, MCP server, and the agent
+manifest — so the whole build is reproducible from a clean machine with one
+command.
+
+## Real vs. mocked
+
+Nothing is mocked. The Linear integration, the sandbox execution, the
+reproduction, the patch verification and the approval gate all genuinely run.
+`tickets.json` ships as an offline fallback if OAuth fails on venue wifi; it is
+unused when Linear is connected.
+
+## Known limits
+
+- The agent rebuilds the project in the sandbox from the ticket description
+  rather than cloning a repository — fine for the demo, not for real codebases.
+- A free Daytona account caps total disk at 30 GiB; leftover sandboxes must be
+  cleared (`cleanup_sandboxes.py`) or runs begin to fail.
+- Sandboxes cold-start without pytest, costing a few turns per run.
+- Only Linear is wired; Jira and Zendesk are not.
+- Patch quality is untested beyond single-function bugs.
+
+**Built with:** TrueForge, Linear MCP, Daytona, OpenAI.
