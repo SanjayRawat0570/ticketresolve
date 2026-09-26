@@ -41,7 +41,12 @@ def load_dotenv():
 load_dotenv()
 
 BASE = os.environ.get("TRUEFORGE_BASE_URL", "http://localhost:8790").rstrip("/")
-MODEL = os.environ.get("TICKET_RESOLVER_MODEL", "openai/gpt-5.6-terra")
+# Empty means "auto-discover from whatever is configured". Note the model FQN
+# uses the hyphenated `name` (openai/gpt-5-6-terra), not the dotted `model_id`.
+MODEL = os.environ.get("TICKET_RESOLVER_MODEL", "")
+
+# Preferred in order; first one actually configured wins.
+MODEL_PREFERENCE = ("gpt-5-6-terra", "gpt-5-6-sol", "gpt-5-6-luna", "gpt-5-5")
 AGENT_NAME = "ticket-resolver"
 PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "agent", "system_prompt.md")
@@ -112,7 +117,7 @@ else:
         say("!!", "OPENAI_API_KEY not set - skipping.")
         say("  ", "Set it and re-run, or add the key in Settings -> Models.")
     else:
-        model_id = MODEL.split("/", 1)[1]
+        model_id = "gpt-5.6-terra"
         status, resp = call("POST", "/api/v1/settings/model-providers", {
             "manifest": {
                 "type": "openai",
@@ -126,10 +131,34 @@ else:
             say("!!", f"could not configure openai ({status}): {resp}")
             say("  ", "Add it via Settings -> Models in the UI instead.")
 
+# Resolve the model FQN against what is actually configured, so a model the
+# provider doesn't expose can't blow up agent creation at step 5.
+status, models = call("GET", "/api/v1/models")
+available = [m.get("name") for m in (models.get("data") or [])] if ok(status) else []
+if not available:
+    die("no models configured. Add an OpenAI key in Settings -> Models, then re-run.")
+
+if MODEL and MODEL in available:
+    pass
+elif MODEL:
+    say("!!", f"{MODEL} is not configured; ignoring TICKET_RESOLVER_MODEL")
+    MODEL = ""
+
+if not MODEL:
+    MODEL = next((f"openai/{p}" for p in MODEL_PREFERENCE
+                  if f"openai/{p}" in available), available[0])
+say("OK", f"using model {MODEL}")
+
 # --------------------------------------------------------------------------
 step(3, "Sandbox provider")
 
+# Agent creation is rejected outright when sandbox.enabled is true and no
+# provider exists, so this flag lets us validate the Linear wiring and the
+# approval gate on a machine that cannot run a sandbox. Never demo with it.
+NO_SANDBOX = "--no-sandbox" in sys.argv or os.environ.get("NO_SANDBOX") == "1"
+
 status, sb = call("GET", "/api/v1/settings/sandbox-providers")
+sandbox_provider_ok = ok(status)
 if ok(status):
     say("OK", "sandbox provider already configured")
 else:
@@ -155,6 +184,14 @@ else:
         })
         say("OK" if ok(status) else "!!",
             "configured daytona" if ok(status) else f"daytona failed ({status}): {resp}")
+        sandbox_provider_ok = ok(status)
+
+sandbox_enabled = sandbox_provider_ok or not NO_SANDBOX
+if NO_SANDBOX and not sandbox_provider_ok:
+    sandbox_enabled = False
+    say("!!", "--no-sandbox: creating the agent WITHOUT sandbox execution.")
+    say("  ", "This validates Linear + the approval gate only. The agent")
+    say("  ", "cannot reproduce bugs. DO NOT DEMO THIS BUILD.")
 
 # --------------------------------------------------------------------------
 step(4, "Linear MCP server")
@@ -219,7 +256,7 @@ manifest = {
     }],
     "config": {
         "iteration_limit": 60,
-        "sandbox": {"enabled": True, "file_downloads": True},
+        "sandbox": {"enabled": sandbox_enabled, "file_downloads": True},
     },
 }
 payload = {
