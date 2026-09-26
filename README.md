@@ -103,14 +103,44 @@ PASS  Sample bug genuinely fails  -  2 failed, 2 passed
   matches the report → agent drafts an honest "could not reproduce, here's what
   I ran, here's what I need from you" → **still stops for approval**.
 
-## Setup
+## Start it
+
+```powershell
+.\start.ps1
+```
+
+That's the whole thing. It checks the Node version, starts TrueForge if it
+isn't already up, provisions the agent, and runs the health check. Safe to
+re-run.
+
+Then open <http://localhost:8790> and start a session with `ticket-resolver`,
+or drive it from the terminal:
+
+```powershell
+python run_ticket.py SAN-5     # reproduce -> patch -> approval gate
+python run_ticket.py SAN-6     # honest "could not reproduce"
+```
+
+### First run only
+
+Put your keys in `.env` (gitignored — never commit it):
+
+```
+OPENAI_API_KEY=sk-...
+DAYTONA_API_KEY=dtn_...
+```
+
+Then `.\start.ps1` will print a Linear OAuth link. Approve it, re-run
+`.\start.ps1`, and run `python seed_linear.py` once to create the two demo
+tickets.
+
+### Manual equivalent
 
 ```bash
 node -v                          # must be >= 22.14
-npx @truefoundry/trueforge       # starts local server + chat UI on :8790
-
-export OPENAI_API_KEY=sk-...     # never commit this
-python setup.py                  # provisions everything via the HTTP API
+npx @truefoundry/trueforge       # local server + chat UI on :8790
+python setup.py                  # provision via the HTTP API
+python verify.py                 # health check
 ```
 
 `setup.py` is idempotent. It configures the model provider, registers the Linear
