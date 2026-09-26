@@ -51,9 +51,13 @@ AGENT_NAME = "ticket-resolver"
 PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "agent", "system_prompt.md")
 
-# Linear tool names vary by MCP server version, so we match on substrings
-# instead of hardcoding. Anything that posts a comment is the customer reply.
-REPLY_TOOL_HINTS = ("create_comment", "createcomment", "add_comment", "comment")
+# Linear exposes 68 tools; handing the agent all of them wastes context and
+# invites it to wander. It only needs to read a ticket and reply to it.
+LINEAR_TOOLS = ["get_issue", "list_issues", "list_comments", "save_comment"]
+
+# The customer reply. Linear calls it save_comment (not create_comment).
+# Ordered by preference; the first one the server actually exposes wins.
+REPLY_TOOL_CANDIDATES = ("save_comment", "create_comment", "add_comment")
 
 
 def call(method, path, body=None):
@@ -225,17 +229,20 @@ else:
         linear_tools = [t.get("name") for t in (tools.get("data") or []) if t.get("name")]
         say("OK", f"{len(linear_tools)} tools discovered")
 
-# Which Linear tools must pause for a human? Anything that posts a comment.
-reply_tools = [t for t in linear_tools
-               if any(h in t.lower() for h in REPLY_TOOL_HINTS)]
-if reply_tools:
-    say("OK", f"approval will gate: {', '.join(reply_tools)}")
-    approval = reply_tools
+# Which Linear tool posts the customer reply? That one must pause for a human.
+reply_tool = next((c for c in REPLY_TOOL_CANDIDATES if c in linear_tools), None)
+if reply_tool:
+    approval = [reply_tool]
+    enabled = [t for t in LINEAR_TOOLS if t in linear_tools]
+    say("OK", f"tools enabled: {', '.join(enabled)}")
+    say("OK", f"approval gates: {reply_tool}")
 else:
-    # Safe default: gate every write. Never leave the reply ungated.
+    # Never leave the reply ungated. If we cannot name the tool, gate all
+    # writes and expose everything so the agent can still function.
     approval = ["@write", "@destructive"]
-    say("--", "reply tool not identified yet - gating @write + @destructive "
-              "(safe default)")
+    enabled = ["@all"]
+    say("--", "reply tool not identified (Linear may be unauthenticated) - "
+              "gating @write + @destructive")
 
 # --------------------------------------------------------------------------
 step(5, f"Agent '{AGENT_NAME}'")
@@ -251,7 +258,8 @@ manifest = {
     "instructions": instructions,
     "mcp_servers": [{
         "name": "linear",
-        "enable_tools": ["@all"],
+        "enable_tools": enabled,
+        "preload": True,
         "require_approval_for_tools": approval,
     }],
     "config": {

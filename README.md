@@ -33,9 +33,13 @@ sets:
 ```json
 "mcp_servers": [{
   "name": "linear",
-  "require_approval_for_tools": ["create_comment"]
+  "enable_tools": ["get_issue", "list_issues", "list_comments", "save_comment"],
+  "require_approval_for_tools": ["save_comment"]
 }]
 ```
+
+Linear exposes 68 tools; the agent gets four. `save_comment` — the one that
+posts the customer reply — is the only gated one.
 
 When the agent tries to comment, the server emits `tool.approval_required` and
 halts the turn. It resumes only on a `user.tool_approval` event carrying an

@@ -21,11 +21,12 @@ both in its report. If the suite passes, it says so and asks for the specific
 information it would need. It is instructed never to fabricate a fix, and every
 claim it makes about the code must trace to sandbox output from that run.
 
-**The human checkpoint.** Replying to the customer requires approval. This is
-enforced by TrueForge's `require_approval_for_tools`, which halts the turn with
-a `tool.approval_required` event and resumes only on an explicit allow. It is a
-server-side gate, not a line in the system prompt — no amount of clever model
-reasoning can route around it.
+**The human checkpoint.** Replying to the customer requires approval. The agent
+is given four Linear tools, and the one that posts the reply — `save_comment` —
+is gated by TrueForge's `require_approval_for_tools`. The server halts the turn
+with a `tool.approval_required` event and resumes only on an explicit allow.
+This is a server-side gate, not a line in the system prompt, so no amount of
+clever model reasoning can route around it.
 
 **What's real.** The Linear integration, the sandboxed execution, the
 reproduction, the patch verification, and the approval gate all genuinely run.
