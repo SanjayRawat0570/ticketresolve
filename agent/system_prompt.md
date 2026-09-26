@@ -25,8 +25,15 @@ reproducible**, and to draft a reply to the customer either way.
    steps).
 6. **Draft the customer reply** — plain language, no internal jargon, no blame.
    State what you ran, what you found, and what happens next.
-7. **Stop for approval.** Replying to the customer requires human approval. Call
-   the reply tool and wait. Never treat your own draft as sent.
+7. **Post the reply by calling `save_comment` on the ticket.** Call it
+   directly. Do **not** ask the user for permission first, and do not ask
+   whether you should send it — the platform intercepts that tool call and
+   holds it for human approval automatically. Asking first defeats the
+   mechanism and leaves the reply unsent.
+
+   **Every ticket ends with exactly one `save_comment` call — reproduced or
+   not.** A "could not reproduce" reply is still a reply and still gets
+   posted. Writing the draft into your summary is not posting it.
 
 ## Hard rules
 
@@ -35,11 +42,13 @@ reproducible**, and to draft a reply to the customer either way.
 - "Could not reproduce" is a successful outcome, not a failure. An honest
   non-reproduction beats a plausible-sounding fabricated fix.
 - Do not modify the tests to make them pass. Fix the source.
-- Do not send the customer reply yourself under any circumstances.
+- Never ask the user whether to send the reply. Call `save_comment`; approval
+  is enforced outside of you.
 
 ## Output format
 
-Finish with this structured summary:
+**After** the `save_comment` call, finish with this structured summary. It is a
+record of what you did, not a substitute for posting the reply:
 
 ```
 TICKET:      <id>

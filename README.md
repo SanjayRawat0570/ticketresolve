@@ -45,14 +45,53 @@ When the agent tries to comment, the server emits `tool.approval_required` and
 halts the turn. It resumes only on a `user.tool_approval` event carrying an
 `allow` decision. This is enforced server-side — prompt wording cannot bypass it.
 
+The agent config also sets `ask_user_questions.enabled: false`. Without it the
+model asks *"may I send this reply?"* through `ask_user_question` instead of
+calling `save_comment` — which looks like an approval step but isn't one, and
+leaves the reply unsent. The gate has to be the platform's, not the model's
+good manners.
+
 ## Layout
 
 ```
-tickets.json              mocked ticket queue (2 tickets, 2 outcomes)
+setup.py                  provisions everything (idempotent)
+verify.py                 one-command health check of every phase
+seed_linear.py            upserts the two demo tickets into Linear
+run_ticket.py             drive a ticket from the terminal
+smoke_test.py             proves the sandbox really executes code
+tfclient.py               shared TrueForge HTTP client
+
+agent/system_prompt.md    the agent's instructions
 sample-repo/              the "customer" codebase with a real bug
   calculator.py           add() subtracts instead of adds
-  test_calculator.py      2 tests that genuinely fail
-agent/system_prompt.md    the agent's instructions
+  test_calculator.py      4 tests; 2 genuinely fail
+tickets.json              offline fallback queue
+```
+
+## Verifying everything works
+
+```bash
+python verify.py                # all phases configured?
+python smoke_test.py            # sandbox really runs code
+python run_ticket.py SAN-5      # reproduce -> patch -> approval gate
+python run_ticket.py SAN-6      # honest "could not reproduce"
+```
+
+`verify.py` makes no model calls and costs nothing. Expected output:
+
+```
+PASS  TrueForge reachable
+PASS  Model provider configured  -  5 model(s)
+PASS  Sandbox provider configured  -  Daytona
+PASS  Sandbox capability enabled
+PASS  Linear MCP authenticated
+PASS  Linear reply tool available  -  68 tools exposed
+PASS  Agent 'ticket-resolver' exists
+PASS  Agent has sandbox enabled
+PASS  ask_user_questions disabled
+PASS  Approval gate on the reply tool  -  gates: save_comment
+PASS  System prompt loaded
+PASS  Sample bug genuinely fails  -  2 failed, 2 passed
 ```
 
 ## The two demo paths

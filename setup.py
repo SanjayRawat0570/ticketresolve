@@ -18,29 +18,9 @@ Run it after `npx @truefoundry/trueforge` is already up.
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
 
-def load_dotenv():
-    """Read .env into the environment. Values already exported win.
+from tfclient import BASE, HERE, call, ok
 
-    Nothing here is printed - keys must never reach stdout or a transcript.
-    """
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-    if not os.path.exists(path):
-        return
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip().strip("'\""))
-
-
-load_dotenv()
-
-BASE = os.environ.get("TRUEFORGE_BASE_URL", "http://localhost:8790").rstrip("/")
 # Empty means "auto-discover from whatever is configured". Note the model FQN
 # uses the hyphenated `name` (openai/gpt-5-6-terra), not the dotted `model_id`.
 MODEL = os.environ.get("TICKET_RESOLVER_MODEL", "")
@@ -48,8 +28,7 @@ MODEL = os.environ.get("TICKET_RESOLVER_MODEL", "")
 # Preferred in order; first one actually configured wins.
 MODEL_PREFERENCE = ("gpt-5-6-terra", "gpt-5-6-sol", "gpt-5-6-luna", "gpt-5-5")
 AGENT_NAME = "ticket-resolver"
-PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "agent", "system_prompt.md")
+PROMPT_FILE = os.path.join(HERE, "agent", "system_prompt.md")
 
 # Linear exposes 68 tools; handing the agent all of them wastes context and
 # invites it to wander. It only needs to read a ticket and reply to it.
@@ -58,32 +37,6 @@ LINEAR_TOOLS = ["get_issue", "list_issues", "list_comments", "save_comment"]
 # The customer reply. Linear calls it save_comment (not create_comment).
 # Ordered by preference; the first one the server actually exposes wins.
 REPLY_TOOL_CANDIDATES = ("save_comment", "create_comment", "add_comment")
-
-
-def call(method, path, body=None):
-    """Return (status, parsed_json_or_text)."""
-    url = path if path.startswith("http") else BASE + path
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
-    if data:
-        req.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            raw = r.read().decode()
-            status = r.status
-    except urllib.error.HTTPError as e:
-        raw, status = e.read().decode(), e.code
-    except urllib.error.URLError as e:
-        die(f"Cannot reach TrueForge at {BASE} ({e.reason}).\n"
-            f"       Start it first:  npx @truefoundry/trueforge")
-    try:
-        return status, json.loads(raw)
-    except json.JSONDecodeError:
-        return status, raw
-
-
-def ok(status):
-    return 200 <= status < 300
 
 
 def say(sym, msg):
@@ -265,6 +218,10 @@ manifest = {
     "config": {
         "iteration_limit": 60,
         "sandbox": {"enabled": sandbox_enabled, "file_downloads": True},
+        # Without this the agent asks "may I send this?" via ask_user_question
+        # instead of calling save_comment - which bypasses the real approval
+        # gate and leaves the reply unsent. The gate must be the platform's.
+        "ask_user_questions": {"enabled": False},
     },
 }
 payload = {
