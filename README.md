@@ -75,6 +75,23 @@ python verify.py                # all phases configured?
 python smoke_test.py            # sandbox really runs code
 python run_ticket.py SAN-5      # reproduce -> patch -> approval gate
 python run_ticket.py SAN-6      # honest "could not reproduce"
+python cleanup_sandboxes.py     # list leftover Daytona sandboxes
+```
+
+### Sandbox housekeeping
+
+Every run that executes code leaves a Daytona sandbox behind. A free account
+caps total disk at 30 GiB, and around ten sandboxes in, runs start failing:
+
+```
+Sandbox initialization failed: Total disk limit exceeded. Maximum allowed: 30GiB.
+```
+
+`setup.py` sets aggressive retention (stop 5 min, archive 10, delete 30), but
+before a demo just clear them outright:
+
+```bash
+python cleanup_sandboxes.py --all
 ```
 
 `verify.py` makes no model calls and costs nothing. Expected output:

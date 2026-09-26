@@ -116,27 +116,36 @@ NO_SANDBOX = "--no-sandbox" in sys.argv or os.environ.get("NO_SANDBOX") == "1"
 
 status, sb = call("GET", "/api/v1/settings/sandbox-providers")
 sandbox_provider_ok = ok(status)
-if ok(status):
+dkey = os.environ.get("DAYTONA_API_KEY")
+
+if sandbox_provider_ok and not dkey:
     say("OK", "sandbox provider already configured")
 else:
-    dkey = os.environ.get("DAYTONA_API_KEY")
     if not dkey:
         if sys.platform == "win32":
             say("!!", "No Daytona key AND this is Windows - there is no local")
             say("  ", "sandbox fallback on win32. Sandbox execution WILL NOT WORK.")
-            say("  ", "Use the macOS/Linux machine, or set DAYTONA_API_KEY.")
+            say("  ", "Use a macOS/Linux machine, or set DAYTONA_API_KEY.")
         else:
             say("--", f"No Daytona key; falling back to the local sandbox "
                       f"provider ({sys.platform} supports it).")
     else:
+        # Re-PUT even when already configured, so the retention intervals
+        # below stay applied. A real key value rotates it; the stored key is
+        # kept if the value is the redacted placeholder.
         status, resp = call("PUT", "/api/v1/settings/sandbox-providers", {
             "manifest": {
                 "type": "daytona",
                 "auth": {"api_key": dkey},
                 "exec_timeout_ms": 60000,
+                # Aggressive cleanup: a free Daytona account caps total disk
+                # at 30 GiB, and every run that executes code leaves a
+                # sandbox behind. The stock 7200-minute delete (5 days) fills
+                # the quota after ~10 runs, after which new runs fail with
+                # "Total disk limit exceeded". See cleanup_sandboxes.py.
                 "auto_stop_interval_in_minutes": 5,
-                "auto_archive_interval_in_minutes": 60,
-                "auto_delete_interval_in_minutes": 7200,
+                "auto_archive_interval_in_minutes": 10,
+                "auto_delete_interval_in_minutes": 30,
             }
         })
         say("OK" if ok(status) else "!!",

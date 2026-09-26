@@ -6,6 +6,9 @@ Target: **3 minutes**. Two tickets, two outcomes, one approval click.
 
 - [ ] `npx @truefoundry/trueforge` running.
 - [ ] `python verify.py` — all 12 checks PASS.
+- [ ] **`python cleanup_sandboxes.py --all`** — free the Daytona disk quota.
+      Every run leaves a sandbox; at ~10 of them new runs fail with
+      "Total disk limit exceeded" and the demo dies mid-take.
 - [ ] `python smoke_test.py` — sandbox proven.
 - [ ] **Delete any existing comments on SAN-5 / SAN-6** so the demo posts fresh
       ones. Test runs leave real comments behind.
@@ -79,6 +82,8 @@ a human in the loop on anything the customer sees."
   the approval gate — the graded parts — are unaffected.
 - **Sandbox is slow to cold-start** → keep talking through what it's doing;
   don't stop and stare at the spinner.
+- **"Total disk limit exceeded"** → `python cleanup_sandboxes.py --all`, then
+  re-run. This is the most likely failure if you've been testing all day.
 - **Agent goes down a rabbit hole** → cut, re-run. Don't debug on camera.
 
 Record ticket 1 and ticket 2 as **separate takes** and stitch them. A clean

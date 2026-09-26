@@ -38,20 +38,34 @@ load_dotenv()
 BASE = os.environ.get("TRUEFORGE_BASE_URL", "http://localhost:8790").rstrip("/")
 
 
-def call(method, path, body=None, timeout=180):
-    """Return (status, parsed_json_or_raw_text)."""
+def call(method, path, body=None, timeout=180, retries=3):
+    """Return (status, parsed_json_or_raw_text).
+
+    Retries on dropped connections - proxied MCP calls (Linear tool listing in
+    particular) occasionally reset mid-response, and a demo should not die on
+    a transient socket error.
+    """
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(BASE + path, data=data, method=method)
-    if data:
-        req.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            raw, status = r.read().decode(), r.status
-    except urllib.error.HTTPError as e:
-        raw, status = e.read().decode(), e.code
-    except urllib.error.URLError as e:
-        sys.exit(f"Cannot reach TrueForge at {BASE} ({e.reason}).\n"
-                 f"Start it with:  npx @truefoundry/trueforge")
+
+    for attempt in range(retries):
+        req = urllib.request.Request(BASE + path, data=data, method=method)
+        if data:
+            req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                raw, status = r.read().decode(), r.status
+            break
+        except urllib.error.HTTPError as e:
+            raw, status = e.read().decode(), e.code
+            break
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            reason = getattr(e, "reason", e)
+            if attempt < retries - 1:
+                time.sleep(2 * (attempt + 1))
+                continue
+            sys.exit(f"Cannot reach TrueForge at {BASE} ({reason}).\n"
+                     f"Start it with:  npx @truefoundry/trueforge")
+
     try:
         return status, json.loads(raw)
     except json.JSONDecodeError:

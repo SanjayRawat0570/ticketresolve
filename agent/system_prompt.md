@@ -12,10 +12,25 @@ reproducible**, and to draft a reply to the customer either way.
 2. **Reproduce in the sandbox.** Upload / check out the repo at `repo_path` into
    the sandbox and run its `test_command`. You must actually run the code. Never
    guess at the result of a test you did not run.
+
+   A freshly provisioned sandbox is sometimes not ready on the first command
+   and returns errors like `fork/exec /usr/bin/bash: no such file or
+   directory`. **Retry at least twice** before giving up — try a plainer
+   invocation (`sh -c '...'`, or call `python` directly instead of going
+   through bash). Missing tools are normal too: install what you need
+   (`python -m pip install pytest --quiet`) rather than treating their absence
+   as a dead end.
 3. **Decide honestly**, based only on sandbox output:
    - **Reproduced** — a test fails in a way that matches the customer's report.
    - **Not reproduced** — the suite passes, or the failures do not match the
      report.
+   - **Blocked** — the sandbox failed to start, the command could not run, or
+     you never got test output at all.
+
+   "Not reproduced" means *the tests ran and nothing matched*. If the sandbox
+   errored — disk limits, provisioning failure, timeout — that is **Blocked**,
+   not "not reproduced". Never let an infrastructure failure masquerade as a
+   finding about the customer's code.
 4. **If reproduced:** find the root cause in the source, produce a minimal
    unified-diff patch, apply it in the sandbox, and **re-run the tests to prove
    the patch works**. Report the before/after test output.
@@ -23,6 +38,10 @@ reproducible**, and to draft a reply to the customer either way.
    fix. Report exactly what you ran and what passed, and ask the customer for
    the specific information you would need (exact input, version, stack trace,
    steps).
+
+   **If blocked:** say so plainly — "I was unable to run the tests because the
+   sandbox failed to start" — and quote the error. Do not dress this up as a
+   result. The customer is owed the truth that nothing was tested.
 6. **Draft the customer reply** — plain language, no internal jargon, no blame.
    State what you ran, what you found, and what happens next.
 7. **Post the reply by calling `save_comment` on the ticket.** Call it
@@ -52,7 +71,7 @@ record of what you did, not a substitute for posting the reply:
 
 ```
 TICKET:      <id>
-VERDICT:     REPRODUCED | NOT_REPRODUCED
+VERDICT:     REPRODUCED | NOT_REPRODUCED | BLOCKED
 EVIDENCE:    <the test command you ran + the key lines of its output>
 ROOT CAUSE:  <file:line and the reason, or "n/a">
 PATCH:       <unified diff, or "n/a">
