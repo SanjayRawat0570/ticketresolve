@@ -66,19 +66,47 @@ def approve(session_id, pending):
     })
     if not ok(status):
         sys.exit(f"approval failed ({status}): {turn}")
+    return turn["data"]["id"]
 
 
-def wait_until_done(session_id, since=0, budget=180):
-    """Stream events from `since` onward until the turn reports done."""
-    t0, printed = time.time(), since
+def tests_ran(events):
+    """Did the agent actually get test output out of the sandbox?
+
+    Daytona sandboxes fail intermittently with
+    `fork/exec /usr/bin/bash: no such file or directory` - not only on cold
+    start; a command can succeed and the next one fail. The model is not a
+    reliable retry loop (told to retry six times, it has stopped after two),
+    so the caller re-runs the whole ticket in a fresh session when no tests
+    ran at all.
+
+    Detecting "no test output" rather than "saw the bash error" matters: a
+    run where the warm-up echo succeeded but every real command failed still
+    contains successful exits, and would otherwise look healthy.
+
+    Warming the sandbox in a separate turn was tried and is worse - splitting
+    the task across two turns made the agent skip the work entirely and post
+    a placeholder comment.
+    """
+    for e in events:
+        i = inner(e)
+        if i.get("type") != "tool.response":
+            continue
+        body = str(i.get("content", ""))
+        if "passed" in body or "failed" in body:
+            return True
+    return False
+
+
+def wait_until_done(session_id, turn_id, budget=180):
+    """Stream one turn's events until it reports done."""
+    t0, printed = time.time(), 0
     while time.time() - t0 < budget:
-        events = events_of(session_id)
-        for e in events[printed:]:
+        mine = [e for e in events_of(session_id) if e.get("turn_id") == turn_id]
+        for e in mine[printed:]:
             describe(e)
-        if len(events) > printed and any(
-                inner(e).get("type") == "turn.done" for e in events[printed:]):
+        printed = len(mine)
+        if any(inner(e).get("type") == "turn.done" for e in mine):
             return
-        printed = len(events)
         time.sleep(3)
     print(f"  (timed out after {budget}s)")
 
@@ -94,13 +122,26 @@ def main():
               "title only. Do not run any code."
               if target == "list" else WORK_PROMPT.format(t=target))
 
-    status, sess = call("POST", "/api/v1/sessions", {"agent": {"name": AGENT}})
-    if not ok(status):
-        sys.exit(f"session create failed ({status}): {sess}\nRun setup.py first.")
-    sid = sess["data"]["id"]
-    print(f"session: {sid}\n")
+    attempts = 1 if target == "list" else 3
+    for attempt in range(1, attempts + 1):
+        status, sess = call("POST", "/api/v1/sessions",
+                            {"agent": {"name": AGENT}})
+        if not ok(status):
+            sys.exit(f"session create failed ({status}): {sess}\n"
+                     f"Run setup.py first.")
+        sid = sess["data"]["id"]
+        print(f"session: {sid}\n")
 
-    pending_events, pending = run_turn(sid, prompt, on_event=describe)
+        events, pending = run_turn(sid, prompt, on_event=describe)
+
+        if target == "list" or tests_ran(events):
+            break
+        if attempt < attempts:
+            print(f"\n  no tests ran - flaky sandbox. Retrying in a fresh "
+                  f"session ({attempt + 1}/{attempts})\n")
+    else:
+        print("\n  WARNING: no run produced test output. The reply below is "
+              "based on no evidence.")
 
     if not pending:
         print(f"\nFinished with no approval gate. {BASE}/sessions/{sid}")
@@ -117,9 +158,7 @@ def main():
         return
 
     print("\napproving...\n")
-    printed = len(pending_events)
-    approve(sid, pending)
-    wait_until_done(sid, since=printed)
+    wait_until_done(sid, approve(sid, pending))
     print(f"\ndone. {BASE}/sessions/{sid}")
 
 

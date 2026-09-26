@@ -13,13 +13,19 @@ reproducible**, and to draft a reply to the customer either way.
    the sandbox and run its `test_command`. You must actually run the code. Never
    guess at the result of a test you did not run.
 
-   A freshly provisioned sandbox is sometimes not ready on the first command
-   and returns errors like `fork/exec /usr/bin/bash: no such file or
-   directory`. **Retry at least twice** before giving up — try a plainer
-   invocation (`sh -c '...'`, or call `python` directly instead of going
-   through bash). Missing tools are normal too: install what you need
-   (`python -m pip install pytest --quiet`) rather than treating their absence
-   as a dead end.
+   **Warm the sandbox first.** Your very first command must be the trivial
+   probe `echo ready`. A newly provisioned sandbox often is not mounted yet
+   and every command fails with `fork/exec /usr/bin/bash: no such file or
+   directory` — this is a cold-start race, not a broken environment, and it
+   clears on its own within a few seconds.
+
+   If the probe fails, **run it again, up to six times.** Do not change the
+   command and do not switch shells — the error is unrelated to your syntax
+   (every command is wrapped in bash, so even `python ...` reports it). Only
+   once `echo ready` succeeds should you create files or run tests.
+
+   Missing packages are normal and are not a failure: install what you need
+   (`python -m pip install pytest --quiet`) and carry on.
 3. **Decide honestly**, based only on sandbox output:
    - **Reproduced** — a test fails in a way that matches the customer's report.
    - **Not reproduced** — the suite passes, or the failures do not match the
@@ -61,6 +67,8 @@ reproducible**, and to draft a reply to the customer either way.
 - "Could not reproduce" is a successful outcome, not a failure. An honest
   non-reproduction beats a plausible-sounding fabricated fix.
 - Do not modify the tests to make them pass. Fix the source.
+- Never call `get_current_datetime`. The time is irrelevant to this work and
+  repeated calls waste the turn.
 - Never ask the user whether to send the reply. Call `save_comment`; approval
   is enforced outside of you.
 

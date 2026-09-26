@@ -102,21 +102,26 @@ def run_turn(session_id, prompt, on_event=None, budget=300):
     if not ok(status):
         sys.exit(f"turn failed ({status}): {turn}")
 
+    turn_id = turn["data"]["id"]
+
+    # Scope to this turn. A session accumulates events across turns, and
+    # matching on any "turn.done" would make a second turn return instantly
+    # on the first turn's completion.
     printed, t0 = 0, time.time()
     while time.time() - t0 < budget:
-        events = events_of(session_id)
+        mine = [e for e in events_of(session_id) if e.get("turn_id") == turn_id]
         if on_event:
-            for e in events[printed:]:
+            for e in mine[printed:]:
                 on_event(e)
-        printed = len(events)
+        printed = len(mine)
 
-        pending = [e for e in events
+        pending = [e for e in mine
                    if inner(e).get("type") == "tool.approval_required"]
         if pending:
-            return events, pending[-1]
-        if any(inner(e).get("type") == "turn.done" for e in events):
-            return events, None
+            return mine, pending[-1]
+        if any(inner(e).get("type") == "turn.done" for e in mine):
+            return mine, None
         time.sleep(3)
 
     print(f"  (timed out after {budget}s)")
-    return events_of(session_id), None
+    return [e for e in events_of(session_id) if e.get("turn_id") == turn_id], None
