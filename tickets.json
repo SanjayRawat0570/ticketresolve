@@ -1,0 +1,22 @@
+[
+  {
+    "id": "TICK-001",
+    "source": "zendesk",
+    "status": "open",
+    "customer": "dana@acme-corp.example",
+    "title": "add() returns wrong sum for negative numbers",
+    "description": "Our billing adjustment job uses your calculator.add helper. add(-2, 3) returns -5 but we expect 1. Positive inputs are wrong too: add(2, 3) gives -1 instead of 5. This started after we upgraded.",
+    "repo_path": "sample-repo",
+    "test_command": "python -m pytest -q"
+  },
+  {
+    "id": "TICK-002",
+    "source": "zendesk",
+    "status": "open",
+    "customer": "raj@globex.example",
+    "title": "App crashes on empty input",
+    "description": "Sometimes the app crashes when a field is submitted empty. We cannot give exact steps and it does not happen every time. Please investigate.",
+    "repo_path": "sample-repo",
+    "test_command": "python -m pytest -q"
+  }
+]
