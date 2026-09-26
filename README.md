@@ -95,6 +95,22 @@ sandbox is enabled but no sandbox provider is configured
 Get a free key at [daytona.io](https://daytona.io), put it in `.env`, and re-run
 `setup.py`.
 
+## Verifying the sandbox really executes code
+
+```bash
+python smoke_test.py
+```
+
+Runs a throwaway agent with no connectors whose only job is to execute a marker
+command in the sandbox. Passing output looks like:
+
+```
+turn    : done  (24s)
+exec calls       : 4
+PASS - 'SANDBOX-PROOF-42' came back from real execution.
+(saw 'Linux' in output - the sandbox is a real remote VM)
+```
+
 ## Verifying the bug is real
 
 ```bash

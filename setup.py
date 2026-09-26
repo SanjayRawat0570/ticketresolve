@@ -272,7 +272,9 @@ for a in (agents.get("data") or []) if ok(status) else []:
         existing_id = a.get("id")
 
 if existing_id:
-    status, resp = call("PUT", f"/api/v1/agents/{existing_id}", payload)
+    # PUT rejects "name" - it takes description + manifest only.
+    status, resp = call("PUT", f"/api/v1/agents/{existing_id}",
+                        {k: v for k, v in payload.items() if k != "name"})
     verb = "updated"
 else:
     status, resp = call("POST", "/api/v1/agents", payload)
