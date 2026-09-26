@@ -34,6 +34,35 @@ Two tickets, two outcomes, one approval click.
 - [ ] **Check your screen for keys** — no `.env` open in an editor, no terminal
       scrollback showing `export OPENAI_API_KEY=...`. Clear it: `clear`.
 
+## How to record (Windows)
+
+Use **Clipchamp** — preinstalled on Windows 11, and it records, trims, adds
+captions and exports 1080p MP4 in one place. Search "Clipchamp" in Start.
+
+This display is 1920x1080, so **record the full screen** and the export is
+native 1080p with no scaling. Do not record a half-size window and upscale it.
+
+1. Clipchamp → **Create a new video** → left sidebar → **Record & create** →
+   **Screen** (or **Screen & camera** if you want a talking head).
+2. Choose **Entire screen**. Turn the microphone **on** if you are narrating.
+3. Record take 1 (SAN-5), stop. Record take 2 (SAN-6) separately.
+4. Drag both onto the timeline, trim the dead air — sandbox provisioning and
+   the pytest install are 20-40 seconds of nothing. Cut them.
+5. If you did not narrate: **Captions → auto-generate**, or add text overlays
+   labelling each step. The spec requires audio *or* captions.
+6. **Export → 1080p** → MP4.
+
+Alternative for capture only: **Xbox Game Bar** (`Win+G`, then `Win+Alt+R`).
+Faster, but it records a single app window rather than the whole screen and
+has no editor, so you would still trim in Clipchamp.
+
+### Legibility
+
+- Browser zoom to **110-125%**. Any more and the agent trace stops fitting.
+- Terminal font up to ~16pt if you show one.
+- Judges may watch this in a small window. If you cannot read it at half size,
+  it is too small.
+
 ## The two Linear issues
 
 Already seeded by `python seed_linear.py` (idempotent — re-run to restore the
@@ -103,6 +132,15 @@ Leave 10 seconds of margin against the 3:00 cap.
 - [ ] Repo public, MIT licensed, `.env.example` present, `.env` NOT committed
 - [ ] **Do not squash the commits** — the spec requires visible history
 - [ ] Both links pasted into the submission form
+
+### Uploading to Drive
+
+1. Upload the MP4 to Google Drive.
+2. Right-click → **Share** → **General access** → **Anyone with the link** →
+   Viewer. Leaving it on "Restricted" is the single most common way a
+   submission gets scored zero for the video.
+3. Copy the link, open it in an **incognito window**, and confirm it plays
+   without a sign-in prompt. Test it, don't assume.
 
 ## If something breaks mid-demo
 
