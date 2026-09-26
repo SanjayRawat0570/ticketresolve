@@ -6,3 +6,4 @@ node_modules/
 runs/
 *.db
 openapi.json
+trueforge.log

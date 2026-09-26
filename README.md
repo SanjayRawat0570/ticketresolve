@@ -122,8 +122,11 @@ PASS  Sample bug genuinely fails  -  2 failed, 2 passed
 
 ## Start it
 
+```bash
+./start.sh          # Git Bash / macOS / Linux
+```
 ```powershell
-.\start.ps1
+.\start.ps1         # PowerShell
 ```
 
 That's the whole thing. It checks the Node version, starts TrueForge if it
