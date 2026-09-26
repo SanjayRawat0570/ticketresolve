@@ -4,6 +4,10 @@
 Idempotent - safe to re-run. Reads secrets from the environment only; nothing
 is written to disk.
 
+Keys come from the shell environment or from a local .env (gitignored, never
+printed). Supplying them through the TrueForge UI instead also works - this
+script detects an already-configured provider and leaves it alone.
+
     export OPENAI_API_KEY=sk-...
     export DAYTONA_API_KEY=dtn-...      # optional on macOS/Linux
     python setup.py
@@ -16,6 +20,25 @@ import os
 import sys
 import urllib.error
 import urllib.request
+
+def load_dotenv():
+    """Read .env into the environment. Values already exported win.
+
+    Nothing here is printed - keys must never reach stdout or a transcript.
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+
+
+load_dotenv()
 
 BASE = os.environ.get("TRUEFORGE_BASE_URL", "http://localhost:8790").rstrip("/")
 MODEL = os.environ.get("TICKET_RESOLVER_MODEL", "openai/gpt-5.6-terra")
