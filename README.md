@@ -76,7 +76,7 @@ real comment-tool name, and creates the agent with the sandbox enabled and the
 approval gate attached. Re-run it after completing OAuth so it can gate the
 exact tool by name instead of falling back to `@write`.
 
-### Sandbox note — run the demo on macOS or Linux
+### Sandbox note — Windows requires Daytona
 
 TrueForge's local sandbox provider is **macOS/Linux only**. On Windows it logs:
 
@@ -85,8 +85,15 @@ Local sandbox fallback is unavailable
 {"reason":"LocalSandboxProvider supports macOS and Linux only (got win32)"}
 ```
 
-On Windows the only sandbox provider is Daytona, so a `DAYTONA_API_KEY` is
-mandatory there. On macOS/Linux the local provider works with no key.
+This project is built and demoed on Windows, so `DAYTONA_API_KEY` is **required**
+— there is no keyless fallback. Without it, agent creation fails outright:
+
+```
+sandbox is enabled but no sandbox provider is configured
+```
+
+Get a free key at [daytona.io](https://daytona.io), put it in `.env`, and re-run
+`setup.py`.
 
 ## Verifying the bug is real
 
