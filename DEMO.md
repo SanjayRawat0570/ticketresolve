@@ -4,10 +4,11 @@ Target: **3 minutes**. Two tickets, two outcomes, one approval click.
 
 ## Before you hit record
 
-- [ ] Run on the **macOS/Linux** machine (Windows has no local sandbox).
-- [ ] `npx @truefoundry/trueforge` running, `python setup.py` green.
-- [ ] Linear OAuth complete; `setup.py` re-run so the gate names the real tool.
-- [ ] Two Linear issues open (see below).
+- [ ] `npx @truefoundry/trueforge` running.
+- [ ] `python verify.py` — all 12 checks PASS.
+- [ ] `python smoke_test.py` — sandbox proven.
+- [ ] **Delete any existing comments on SAN-5 / SAN-6** so the demo posts fresh
+      ones. Test runs leave real comments behind.
 - [ ] Browser zoomed to ~125% so text is legible in the recording.
 - [ ] Close Slack/Discord/email. No notification popups.
 - [ ] **Check your screen for keys** — no `.env` open in an editor, no terminal
@@ -15,15 +16,19 @@ Target: **3 minutes**. Two tickets, two outcomes, one approval click.
 
 ## The two Linear issues
 
-**Issue 1 — reproducible**
-> Title: `add() returns wrong sum`
-> add(-2, 3) returns -5 but we expect 1. Positive inputs are wrong too:
-> add(2, 3) gives -1 instead of 5. Repo: sample-repo, tests: python -m pytest -q
+Already seeded by `python seed_linear.py` (idempotent — re-run to restore the
+wording):
 
-**Issue 2 — not reproducible**
-> Title: `App crashes on empty input`
-> Sometimes the app crashes when a field is submitted empty. We cannot give
-> exact steps and it does not happen every time. Repo: sample-repo
+- **SAN-5** `add() returns wrong sum` — a real, reproducible defect.
+- **SAN-6** `App crashes on empty input` — vague, and no such bug exists.
+
+Both carry the same `sample-repo` description, so the only difference is
+whether the reported defect is actually there.
+
+Run them from the terminal (`python run_ticket.py SAN-5`) or from the chat UI
+by starting a session with `ticket-resolver` and typing the ticket ID. The UI
+is better on camera — the approval prompt renders as a real Approve/Reject
+control.
 
 ## Script
 
